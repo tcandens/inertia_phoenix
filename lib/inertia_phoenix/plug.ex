@@ -9,6 +9,11 @@ defmodule InertiaPhoenix.Plug do
     conn
     |> maybe_merge_flash
     |> check_inertia_req
+    |> clear_errors
+  end
+
+  defp clear_errors(conn) do
+    delete_session(conn, :errors)
   end
 
   defp check_inertia_req(conn) do

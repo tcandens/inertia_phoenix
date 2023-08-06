@@ -128,11 +128,22 @@ defmodule PingWeb.Plugs.InertiaShare do
   def init(default), do: default
 
   def call(conn, _) do
-    InertiaPhoenix.share(conn, :auth, build_auth_map(conn))
+    conn
+    |> InertiaPhoenix.share(:auth, build_auth_map(conn)),
+    |> InertiaPhoenix.share(:errors, errors_from_session(conn))
   end
 
   defp build_auth_map(conn) do
     # build complex auth map
+  end
+
+  defp errors_from_session(conn) do
+    errors = get_session(conn, :errors) 
+    if is_map(errors) and map_size(errors) > 0 do
+      errors
+    else
+      %{}
+    end
   end
 end
 ```
@@ -147,10 +158,41 @@ end
 ```
 ## Handle Form Errors
 
-We can use Shared Data and the Phoenix Session to store server side errors.
+Begin by assigning any errors to the session, under the key of `:errors` so they can be
+shared with inertia via `InertiaShare` plug.
 
-See [PingCRM](https://github.com/devato/pingcrm) for examples.
+```elixir
+conn
+|> put_session(:errors, %{foo: "bar"})
+```
 
+If you are dealing with a changeset, which you most liekly will if you are dealing with
+forms, then you can utilize the provided utility function to extract errors.
+
+```elixir
+defmodule MyAppWeb.GenericController do
+
+    def index(conn, params) do
+        case MyContext.operation(params) do
+            {:ok, result} ->
+                # continue with successful operation
+            {:error, %Ecto.Changeset{} = changeset}  ->
+                conn 
+                # Helper function extracts and assigns appropriate errors from changeset
+                |> put_errors(changeset)
+                # Redirect back to the appropriate page
+                |> redirect(to: new_path)
+        end
+    end
+end
+```
+
+Any errors assigned with `put_errors` will appear under the `errors` prop on your page components as such.
+
+```javascript
+const { errors } = usePage().props
+// { input_name: "validation errors for input of name 'input_name'"}
+```
 
 
 ## Configure Axios

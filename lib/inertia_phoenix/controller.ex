@@ -6,7 +6,8 @@ defmodule InertiaPhoenix.Controller do
     only: [
       get_req_header: 2,
       put_resp_header: 3,
-      put_resp_cookie: 4
+      put_resp_cookie: 4,
+      get_session: 2,
     ]
 
   alias Phoenix.Controller
@@ -40,6 +41,7 @@ defmodule InertiaPhoenix.Controller do
     |> lazy_load()
     |> assign_component(component)
     |> assign_flash(Map.get(conn.assigns, :flash, %{}))
+    |> assign_errors(conn)
   end
 
   defp page_map(conn, assigns) do
@@ -105,4 +107,15 @@ defmodule InertiaPhoenix.Controller do
   defp put_csrf_cookie(conn) do
     put_resp_cookie(conn, "XSRF-TOKEN", Controller.get_csrf_token(), http_only: false)
   end
+
+  defp assign_errors(assigns, conn) do
+    errors = get_session(conn, :errors)
+    if is_map(errors) and map_size(errors) > 0 do
+      props = Map.merge(%{errors: errors}, assigns[:props])
+      Keyword.put(assigns, :props, props)
+    else
+      assigns
+    end
+  end
+
 end

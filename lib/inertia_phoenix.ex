@@ -12,6 +12,28 @@ defmodule InertiaPhoenix do
     put_private(conn, :inertia_phoenix_shared_props, shared_props)
   end
 
+  @doc "shortcut for assigning Ecto changesets"
+  def put_errors(conn, changeset = %Ecto.Changeset{}) do
+    errors = extract_changeset_errors(changeset)
+
+    conn
+    |> put_errors(errors)
+  end
+
+  def put_errors(conn, errors) do
+    put_session(conn, :errors, errors)
+  end
+
+  defp extract_changeset_errors(changeset = %Ecto.Changeset{}) do
+    Ecto.Changeset.traverse_errors(changeset, fn {msg, opts} ->
+      Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+        opts 
+        |> Keyword.get(String.to_existing_atom(key), key) 
+        |> to_string()
+      end)
+    end)
+  end
+
   def assets_version do
     Application.get_env(:inertia_phoenix, :assets_version, "1")
     |> to_string
